@@ -474,7 +474,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     $('storage').textContent = !db ? 'Archivio non disponibile: i brani restano solo finché l’app è aperta'
       : total ? `${(total / 1048576).toFixed(1)} MB salvati` : '';
   }
-  const renderAll = () => { renderTabs(); renderList(); };
+  const renderAll = () => { renderTabs(); renderList(); updateSub(); };
 
   // ---------- Pannello opzioni del brano ----------
   function closeSheet() { $('sheetBg').hidden = true; }
@@ -930,7 +930,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     }
     timerCheck();
   });
-  audio.addEventListener('play', () => { setPlayIcon(true); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; });
+  audio.addEventListener('play', () => { setPlayIcon(true); updateSub(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; });
   audio.addEventListener('pause', () => {
     setPlayIcon(false);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
