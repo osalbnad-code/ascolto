@@ -114,6 +114,34 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
 .sheet-actions .danger{color:var(--danger)}
 .sheet-actions .close{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 
+/* Ricerca */
+.search{display:block;width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 14px;font:inherit;margin:0 0 10px}
+.search::placeholder{color:var(--muted)}
+.search[hidden]{display:none}
+
+/* Equalizzatore e sveglia */
+.eq-row{display:grid;grid-template-columns:4.4em 1fr 3.6em;align-items:center;gap:10px;padding:6px 0}
+.eq-row input[type=range]{width:100%;accent-color:var(--accent)}
+.eq-row .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 6px}
+.field{display:grid;gap:6px;margin:10px 0}
+.field span{color:var(--muted);font-size:.85rem}
+.field input,.field select{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.note{color:var(--muted);font-size:.85rem;margin:10px 0 0}
+.alarm-info{color:var(--accent);font-size:.88rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.alarm-info[hidden]{display:none}
+
+/* Modalità notte e sveglia che suona: sempre scura */
+.night{position:fixed;inset:0;background:#05080f;color:#c9cfd8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:40;text-align:center;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px))}
+.night[hidden]{display:none}
+.night .clock{font-family:"Bricolage Grotesque","Figtree",system-ui,sans-serif;font-size:clamp(4rem,22vw,9rem);font-weight:500;font-variant-numeric:tabular-nums;color:#7d889b;line-height:1}
+.night .info{color:#6b7587;max-width:32ch}
+.night.ringing .clock{color:#eda54f}
+.night.ringing .info{color:#e9ece6;font-weight:600}
+.night .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+.night button{border:1px solid #2a3344;border-radius:999px;padding:13px 22px;color:#c9cfd8;font-weight:500}
+.night button.primary{background:#eda54f;color:#16233a;border-color:#eda54f;font-weight:700}
+
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:30}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion: reduce){.prog-ring{transition:none}}
@@ -167,8 +195,11 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
         <option value="end">A fine brano</option>
       </select>
       <button class="chip" id="fade" aria-pressed="true">Dissolvenza</button>
+      <button class="chip" id="eqBtn" aria-pressed="false">Equalizzatore</button>
+      <button class="chip" id="alarmBtn" aria-pressed="false">Sveglia</button>
     </div>
     <div class="timer-info" id="timerInfo" aria-live="polite"></div>
+    <button class="alarm-info" id="alarmInfo" hidden></button>
   </section>
 
   <div class="lib-head">
@@ -180,6 +211,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     </label>
   </div>
   <div class="tabs" id="tabs" role="tablist" aria-label="Playlist"></div>
+  <input type="search" class="search" id="search" placeholder="Cerca un brano…" aria-label="Cerca un brano" autocomplete="off" hidden>
   <div class="list-tools" id="listTools"></div>
   <ol class="list" id="list"></ol>
 
@@ -194,6 +226,12 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     <div class="sheet-title" id="sheetTitle"></div>
     <div id="sheetBody"></div>
   </div>
+</div>
+
+<div class="night" id="night" hidden role="dialog" aria-label="Modalità notte">
+  <div class="clock" id="nClock">00:00</div>
+  <div class="info" id="nInfo"></div>
+  <div class="btns" id="nBtns"></div>
 </div>
 
 <audio id="audio" preload="metadata"></audio>
@@ -222,6 +260,51 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   const speeds = [1, 1.25, 1.5, 0.75];
   let speedIdx = 0;
   let sleepUntil = 0, sleepAtEnd = false, sleepTick = null;
+  let query = '';                 // testo della ricerca
+  let ringing = false;            // sveglia in corso
+
+  // ---------- Equalizzatore (Web Audio) ----------
+  const EQ_BANDS = [60, 250, 1000, 4000, 12000];
+  const EQ_LABELS = ['60 Hz', '250 Hz', '1 kHz', '4 kHz', '12 kHz'];
+  const PRESETS = {
+    Normale: [0, 0, 0, 0, 0],
+    Bassi:   [6, 4, 0, -1, -1],
+    Voce:    [-3, -1, 3, 4, 1],
+    Acuti:   [-1, -1, 0, 3, 6],
+    Notte:   [2, 1, 0, -3, -6],
+    Cuffie:  [3, 1, -1, 1, 3]
+  };
+  let actx = null, filters = [], gainNode = null;
+  let eqOn = false, eqGains = [0, 0, 0, 0, 0];
+  function ensureGraph() {
+    if (actx) return true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      actx = new AC();
+      const src = actx.createMediaElementSource(audio);
+      filters = EQ_BANDS.map((f, i) => {
+        const b = actx.createBiquadFilter();
+        b.type = i === 0 ? 'lowshelf' : i === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking';
+        b.frequency.value = f; b.Q.value = 1; b.gain.value = 0;
+        return b;
+      });
+      gainNode = actx.createGain();
+      let n = src;
+      filters.forEach(f => { n.connect(f); n = f; });
+      n.connect(gainNode); gainNode.connect(actx.destination);
+      audio.volume = 1;
+      return true;
+    } catch { actx = null; return false; }
+  }
+  function applyEq() {
+    if (!actx) return;
+    filters.forEach((f, i) => { f.gain.value = eqOn ? eqGains[i] : 0; });
+  }
+  function setVolume(v) {
+    if (gainNode) { gainNode.gain.value = v; audio.volume = 1; }
+    else audio.volume = v;
+  }
 
   // ---------- Preferenze ----------
   const prefs = {
@@ -271,6 +354,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   };
   const cleanName = n => n.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
   const byId = id => tracks.find(t => t.id === id);
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const listById = id => lists.find(l => l.id === id);
   const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   let toastT;
@@ -349,6 +433,15 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     const ol = $('list'); ol.innerHTML = '';
     $('count').textContent = tracks.length ? `${tracks.length} ${tracks.length === 1 ? 'brano' : 'brani'}` : '';
     const ids = viewIds(activeList);
+    $('search').hidden = !tracks.length;
+    const words = norm(query).split(/\s+/).filter(Boolean);
+    const shown = ids.map((id, i) => ({ id, i })).filter(x => !words.length || words.every(w => norm(byId(x.id).name).includes(w)));
+    if (ids.length && !shown.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = `Nessun brano trovato per «${query.trim()}».`;
+      ol.appendChild(li);
+    }
     if (!ids.length) {
       const li = document.createElement('li');
       li.className = 'empty';
@@ -357,7 +450,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
         : 'Playlist vuota. Tocca «Aggiungi» mentre sei qui, oppure apri «Tutti» e usa ⋮ accanto a un brano.';
       ol.appendChild(li);
     }
-    ids.forEach((id, i) => {
+    shown.forEach(({ id, i }) => {
       const t = byId(id);
       const li = document.createElement('li');
       if (id === curId) li.className = 'current';
@@ -426,6 +519,227 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     body.appendChild(acts);
     $('sheetBg').hidden = false;
   }
+
+  function openSheet(title, build) {
+    $('sheetTitle').textContent = title;
+    const body = $('sheetBody'); body.innerHTML = '';
+    build(body);
+    $('sheetBg').hidden = false;
+  }
+  const el = (tag, props = {}, text) => { const e = Object.assign(document.createElement(tag), props); if (text !== undefined) e.textContent = text; return e; };
+
+  // ---------- Equalizzatore: pannello ----------
+  function openEqSheet() {
+    openSheet('Equalizzatore', body => {
+      const row = el('label', { className: 'check' });
+      const cb = el('input', { type: 'checkbox', checked: eqOn });
+      row.append(cb, el('span', {}, 'Equalizzatore attivo'));
+      body.appendChild(row);
+      const sliders = [];
+      const vals = [];
+      const refresh = () => {
+        sliders.forEach((r, i) => { r.value = eqGains[i]; });
+        vals.forEach((v, i) => { v.textContent = (eqGains[i] > 0 ? '+' : '') + eqGains[i] + ' dB'; });
+        cb.checked = eqOn;
+        $('eqBtn').setAttribute('aria-pressed', eqOn);
+      };
+      const commit = () => {
+        if (eqOn) ensureGraph();
+        applyEq(); prefs.set('eqOn', eqOn); prefs.set('eq', eqGains); refresh();
+      };
+      cb.onchange = () => { eqOn = cb.checked; commit(); };
+      body.appendChild(el('div', { className: 'sheet-label' }, 'Preimpostazioni'));
+      const pr = el('div', { className: 'presets' });
+      Object.entries(PRESETS).forEach(([name, g]) => {
+        const b = el('button', { className: 'chip' }, name);
+        b.onclick = () => { eqGains = g.slice(); eqOn = name !== 'Normale' || eqOn; commit(); };
+        pr.appendChild(b);
+      });
+      body.appendChild(pr);
+      body.appendChild(el('div', { className: 'sheet-label' }, 'Regolazione fine'));
+      EQ_LABELS.forEach((lab, i) => {
+        const r = el('div', { className: 'eq-row' });
+        const range = el('input', { type: 'range', min: -12, max: 12, step: 1, value: eqGains[i] });
+        range.setAttribute('aria-label', 'Guadagno ' + lab);
+        const v = el('span', { className: 'val' });
+        range.oninput = () => { eqGains[i] = +range.value; eqOn = true; commit(); };
+        r.append(el('span', {}, lab), range, v);
+        sliders.push(range); vals.push(v);
+        body.appendChild(r);
+      });
+      body.appendChild(el('p', { className: 'note' }, 'Le bande basse sono a sinistra (60 Hz), le alte a destra (12 kHz). Se un brano distorce, abbassa le bande alzate di 1–2 dB.'));
+      const acts = el('div', { className: 'sheet-actions' });
+      const done = el('button', { className: 'close' }, 'Fatto');
+      done.onclick = closeSheet;
+      acts.appendChild(done);
+      body.appendChild(acts);
+      refresh();
+    });
+  }
+  $('eqBtn').onclick = openEqSheet;
+
+  // ---------- Sveglia ----------
+  let alarm = null;               // {time:'07:00', id, fade, at}
+  let alarmTick = null, rampTimer = null, wakeLock = null;
+  const pad = n => String(n).padStart(2, '0');
+  function nextOccurrence(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date(); d.setHours(h, m, 0, 0);
+    if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  function untilText(ms) {
+    const min = Math.max(0, Math.round(ms / 60000));
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? `${h} h ${m} min` : `${m} min`;
+  }
+  function updateAlarmInfo() {
+    $('alarmBtn').setAttribute('aria-pressed', !!alarm);
+    const info = $('alarmInfo');
+    if (!alarm) { info.hidden = true; return; }
+    const t = byId(alarm.id);
+    const hhmm = new Date(alarm.at);
+    info.textContent = `Sveglia alle ${pad(hhmm.getHours())}:${pad(hhmm.getMinutes())}${t ? ' · ' + t.name : ''} — modalità notte`;
+    info.hidden = false;
+  }
+  function openAlarmSheet() {
+    openSheet('Sveglia', body => {
+      if (!tracks.length) {
+        body.appendChild(el('p', { className: 'note' }, 'Aggiungi prima almeno un brano da usare come suoneria.'));
+        const acts = el('div', { className: 'sheet-actions' });
+        const ok = el('button', { className: 'close' }, 'Ok'); ok.onclick = closeSheet;
+        acts.appendChild(ok); body.appendChild(acts); return;
+      }
+      const f1 = el('label', { className: 'field' });
+      const time = el('input', { type: 'time', value: alarm ? alarm.time : '07:00', required: true });
+      f1.append(el('span', {}, 'Ora'), time);
+      const f2 = el('label', { className: 'field' });
+      const sel = el('select');
+      tracks.forEach(t => sel.appendChild(el('option', { value: t.id, selected: t.id === (alarm ? alarm.id : curId) }, t.name)));
+      f2.append(el('span', {}, 'Brano'), sel);
+      const fr = el('label', { className: 'check' });
+      const fade = el('input', { type: 'checkbox', checked: alarm ? alarm.fade : true });
+      fr.append(fade, el('span', {}, 'Volume crescente nel primo minuto'));
+      body.append(f1, f2, fr);
+      body.appendChild(el('p', { className: 'note' }, 'Suona solo se Ascolto resta aperto: lascia il telefono in carica con la modalità notte attiva, che tiene lo schermo acceso al minimo. Se chiudi l’app o blocchi lo schermo, la sveglia non può suonare. Per una sveglia garantita usa l’Orologio di Android, scegliendo l’MP3 come suoneria.'));
+      const acts = el('div', { className: 'sheet-actions' });
+      const on = el('button', { className: 'close' }, alarm ? 'Aggiorna e avvia modalità notte' : 'Attiva e avvia modalità notte');
+      on.onclick = () => {
+        if (!time.value) { toast('Scegli un orario'); return; }
+        alarm = { time: time.value, id: sel.value, fade: fade.checked, at: nextOccurrence(time.value) };
+        prefs.set('alarm', alarm);
+        startAlarmWatch(); closeSheet(); showNight();
+        toast('Sveglia tra ' + untilText(alarm.at - Date.now()));
+      };
+      acts.appendChild(on);
+      if (alarm) {
+        const off = el('button', { className: 'danger' }, 'Disattiva sveglia');
+        off.onclick = () => { clearAlarm(); closeSheet(); toast('Sveglia disattivata'); };
+        acts.appendChild(off);
+      }
+      const cancel = el('button', {}, 'Annulla'); cancel.onclick = closeSheet;
+      acts.appendChild(cancel);
+      body.appendChild(acts);
+    });
+  }
+  $('alarmBtn').onclick = openAlarmSheet;
+  $('alarmInfo').onclick = () => showNight();
+
+  function startAlarmWatch() {
+    clearInterval(alarmTick);
+    updateAlarmInfo();
+    if (!alarm) return;
+    alarmTick = setInterval(alarmCheck, 1000);
+    alarmCheck();
+  }
+  function alarmCheck() {
+    updateNightClock();
+    if (!alarm || ringing) return;
+    const late = Date.now() - alarm.at;
+    if (late >= 0) {
+      if (late < 2 * 3600e3) ring();
+      else { clearAlarm(); toast('La sveglia è scaduta mentre l’app era chiusa'); }
+    }
+  }
+  function clearAlarm() {
+    alarm = null; prefs.set('alarm', null);
+    clearInterval(alarmTick); alarmTick = null;
+    updateAlarmInfo();
+    if (!ringing) hideNight();
+  }
+  async function ring() {
+    const t = byId(alarm.id) || currentTrack() || tracks[0];
+    if (!t) { clearAlarm(); return; }
+    ringing = true;
+    if (sleepUntil || sleepAtEnd) stopSleep(false);
+    curId = t.id; buildOrder(curId);
+    await loadCurrent(false);
+    clearInterval(rampTimer);
+    if (alarm.fade) {
+      let v = 0.03; setVolume(v);
+      rampTimer = setInterval(() => { v = Math.min(1, v + 0.5 / 60); setVolume(v); if (v >= 1) clearInterval(rampTimer); }, 500);
+    } else setVolume(1);
+    play();
+    try { navigator.vibrate && navigator.vibrate([500, 300, 500, 300, 500]); } catch {}
+    showNight();
+  }
+  function stopRing(snooze) {
+    ringing = false;
+    clearInterval(rampTimer);
+    audio.pause(); setVolume(1);
+    if (snooze && alarm) {
+      alarm.at = Date.now() + 10 * 60000;
+      prefs.set('alarm', alarm);
+      startAlarmWatch(); showNight();
+      toast('Sveglia posticipata di 10 minuti');
+    } else {
+      clearAlarm(); hideNight();
+      toast('Buongiorno!');
+    }
+  }
+
+  // Modalità notte: orologio a tutto schermo con lo schermo tenuto acceso
+  async function requestWakeLock() {
+    try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch {}
+  }
+  function releaseWakeLock() { try { wakeLock && wakeLock.release(); } catch {} wakeLock = null; }
+  function showNight() {
+    const n = $('night');
+    n.hidden = false;
+    n.classList.toggle('ringing', ringing);
+    const btns = $('nBtns'); btns.innerHTML = '';
+    if (ringing) {
+      const sn = el('button', {}, 'Posticipa 10 min'); sn.onclick = () => stopRing(true);
+      const st = el('button', { className: 'primary' }, 'Ferma'); st.onclick = () => stopRing(false);
+      btns.append(sn, st);
+    } else {
+      const ex = el('button', {}, 'Esci');
+      ex.onclick = () => { hideNight(); toast('Lascia Ascolto aperto in primo piano perché la sveglia suoni'); };
+      const off = el('button', {}, 'Disattiva sveglia');
+      off.onclick = () => { clearAlarm(); toast('Sveglia disattivata'); };
+      btns.append(ex, off);
+    }
+    requestWakeLock();
+    updateNightClock();
+  }
+  function hideNight() { $('night').hidden = true; releaseWakeLock(); }
+  function updateNightClock() {
+    if ($('night').hidden) return;
+    const d = new Date();
+    $('nClock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const t = alarm ? byId(alarm.id) : null;
+    if (ringing) $('nInfo').textContent = currentTrack() ? currentTrack().name : 'Sveglia';
+    else if (alarm) { const at = new Date(alarm.at); $('nInfo').textContent = `Sveglia alle ${pad(at.getHours())}:${pad(at.getMinutes())} · tra ${untilText(alarm.at - Date.now())}${t ? ' · ' + t.name : ''}`; }
+    else $('nInfo').textContent = 'Nessuna sveglia attiva';
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!$('night').hidden) requestWakeLock();
+    if (actx && actx.state === 'suspended' && !audio.paused) actx.resume().catch(() => {});
+    alarmCheck();
+  });
+
+  $('search').addEventListener('input', e => { query = e.target.value; renderList(); });
 
   // ---------- Gestione playlist ----------
   function newList(withId) {
@@ -520,6 +834,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
       }
     } catch {}
     memBlobs.clear(); tracks = []; lists = []; order = []; curId = null;
+    if (alarm) clearAlarm();
     activeList = 'all'; playCtx = 'all';
     prefs.set('active', 'all'); prefs.set('ctx', 'all'); prefs.set('resume', null);
     resetUI(); renderAll();
@@ -548,7 +863,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     currentUrl = URL.createObjectURL(blob);
     audio.src = currentUrl;
     audio.playbackRate = speeds[speedIdx];
-    if (!sleepUntil) audio.volume = 1;
+    if (!sleepUntil && !ringing) setVolume(1);
     $('title').textContent = t.name;
     updateSub();
     renderList();
@@ -561,8 +876,10 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   }
 
   function play() {
-    if (!currentTrack()) { toast('Aggiungi prima un brano'); return; }
-    audio.play().catch(() => toast('Tocca di nuovo play per avviare'));
+    if (!currentTrack()) { toast('Aggiungi prima un brano'); return Promise.resolve(); }
+    if (eqOn && ensureGraph()) applyEq();
+    if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
+    return audio.play().catch(() => toast('Tocca di nuovo play per avviare'));
   }
   function togglePlay() { audio.paused ? play() : audio.pause(); }
 
@@ -586,6 +903,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   const seekBy = d => { if (isFinite(audio.duration)) audio.currentTime = Math.min(Math.max(0, audio.currentTime + d), audio.duration); };
 
   audio.addEventListener('ended', () => {
+    if (ringing) { audio.currentTime = 0; play(); return; }
     if (sleepAtEnd) { stopSleep(true); toast('Timer: riproduzione fermata'); return; }
     if (repeatMode === 'uno') { audio.currentTime = 0; play(); return; }
     next(true);
@@ -673,7 +991,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     fadeOn = !fadeOn;
     $('fade').setAttribute('aria-pressed', fadeOn);
     prefs.set('fade', fadeOn);
-    if (!fadeOn) audio.volume = 1;
+    if (!fadeOn) setVolume(1);
     toast(fadeOn ? 'Dissolvenza negli ultimi 30 secondi del timer' : 'Dissolvenza disattivata');
   };
 
@@ -685,7 +1003,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     $('sleep').value = '0'; lastSleepValue = '0';
     $('timerInfo').textContent = '';
     if (pause && !audio.paused) audio.pause();
-    audio.volume = 1;
+    setVolume(1);
   }
   function startSleep(minutes) {
     clearInterval(sleepTick);
@@ -700,11 +1018,11 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
       const rem = sleepUntil - Date.now();
       if (rem <= 0) { stopSleep(true); toast('Timer: riproduzione fermata'); return; }
       $('timerInfo').textContent = 'Spegnimento tra ' + fmt(rem / 1000);
-      if (fadeOn && rem <= FADE_MS) audio.volume = Math.max(0.03, rem / FADE_MS);
+      if (fadeOn && rem <= FADE_MS) setVolume(Math.max(0.03, rem / FADE_MS));
     } else if (sleepAtEnd) {
       const d = audio.duration, left = d - audio.currentTime;
       $('timerInfo').textContent = isFinite(d) ? 'Si ferma a fine brano · ' + fmt(left) : 'Si ferma a fine brano';
-      if (fadeOn && isFinite(d) && left * 1000 <= FADE_MS) audio.volume = Math.max(0.03, (left * 1000) / FADE_MS);
+      if (fadeOn && isFinite(d) && left * 1000 <= FADE_MS) setVolume(Math.max(0.03, (left * 1000) / FADE_MS));
     }
   }
   $('sleep').addEventListener('change', e => {
@@ -713,7 +1031,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     if (v === 'end') {
       clearInterval(sleepTick); sleepUntil = 0; sleepAtEnd = true;
       sleepTick = setInterval(timerCheck, 1000);
-      audio.volume = 1; lastSleepValue = v; timerCheck();
+      setVolume(1); lastSleepValue = v; timerCheck();
       toast('Si ferma a fine brano'); return;
     }
     let minutes = +v;
@@ -722,7 +1040,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
       minutes = parseInt(ans, 10);
       if (!(minutes > 0 && minutes <= 720)) { e.target.value = lastSleepValue; if (ans !== null) toast('Inserisci un numero tra 1 e 720'); return; }
     }
-    audio.volume = 1;
+    setVolume(1);
     lastSleepValue = v;
     startSleep(minutes);
   });
@@ -769,6 +1087,9 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     shuffle = prefs.get('shuffle', false); $('shuffle').setAttribute('aria-pressed', shuffle);
     speedIdx = prefs.get('speed', 0) % speeds.length; applySpeed();
     fadeOn = prefs.get('fade', true); $('fade').setAttribute('aria-pressed', fadeOn);
+    eqOn = prefs.get('eqOn', false);
+    const g = prefs.get('eq', null); if (Array.isArray(g) && g.length === 5) eqGains = g.map(Number);
+    $('eqBtn').setAttribute('aria-pressed', eqOn);
     try { tracks = (await tx('meta', 'readonly', s => s.getAll())) || []; } catch { tracks = []; }
     try { lists = (await tx('lists', 'readonly', s => s.getAll())) || []; } catch { lists = []; }
     tracks.sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true }));
@@ -785,6 +1106,9 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
       await loadCurrent(false, t0);
       if (t0 > 5) updateSub(` · riprende da ${fmt(t0)}`);
     }
+    alarm = prefs.get('alarm', null);
+    if (alarm && !(alarm.at && alarm.time)) alarm = null;
+    startAlarmWatch();
   })();
 })();
 </script>
