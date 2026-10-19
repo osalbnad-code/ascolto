@@ -15,7 +15,7 @@
 :root{
   --bg:#eef1ec; --surface:#ffffff; --ink:#16233a; --muted:#5d6878;
   --line:#d5dbd3; --accent:#c9761f; --accent-soft:#f3e3cf; --ring-track:#dde3db;
-  --danger:#b2402e;
+  --danger:#b2402e; --scrim:rgba(10,16,28,.45);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -24,13 +24,13 @@
   :root:not([data-theme="light"]){
     --bg:#101a2b; --surface:#17243a; --ink:#e9ece6; --muted:#97a2b3;
     --line:#26354f; --accent:#eda54f; --accent-soft:#33301f; --ring-track:#223250;
-    --danger:#e07a63;
+    --danger:#e07a63; --scrim:rgba(0,0,0,.55);
   }
 }
 :root[data-theme="dark"]{
   --bg:#101a2b; --surface:#17243a; --ink:#e9ece6; --muted:#97a2b3;
   --line:#26354f; --accent:#eda54f; --accent-soft:#33301f; --ring-track:#223250;
-  --danger:#e07a63;
+  --danger:#e07a63; --scrim:rgba(0,0,0,.55);
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:inherit}
@@ -68,30 +68,53 @@ button:focus-visible,label:focus-visible,select:focus-visible{outline:2px solid 
 .play:active{background:var(--accent);color:#fff}
 
 .options{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
-.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:.88rem;font-weight:500;color:var(--muted)}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:.88rem;font-weight:500;color:var(--muted);white-space:nowrap}
 .chip[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
 select.chip{appearance:none;-webkit-appearance:none}
+.timer-info{color:var(--accent);font-size:.88rem;font-weight:600;min-height:1.2em;text-align:center;font-variant-numeric:tabular-nums}
 
-/* Libreria */
-.lib-head{display:flex;align-items:center;justify-content:space-between;margin:30px 0 10px;gap:10px}
+/* Playlist */
+.lib-head{display:flex;align-items:center;justify-content:space-between;margin:28px 0 10px;gap:10px}
 h2{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:1.25rem;margin:0;font-weight:700}
-.add{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border-radius:999px;padding:9px 16px;font-weight:600;cursor:pointer}
-.add{position:relative;overflow:hidden}
+.add{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border-radius:999px;padding:9px 16px;font-weight:600;cursor:pointer;flex:none}
 .add input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs .chip{flex:none}
+.tabs .new{border-style:dashed}
+.list-tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.list-tools .chip{color:var(--ink)}
+.list-tools .chip.play-all{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.list-tools .chip.danger{color:var(--danger)}
+
 ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-.list li{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:4px 0}
+.list li{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line);padding:4px 0}
 .list .pick{flex:1;min-width:0;text-align:left;padding:10px 4px;display:flex;gap:12px;align-items:center}
 .list .idx{width:1.8em;color:var(--muted);font-variant-numeric:tabular-nums;font-size:.85rem;text-align:right;flex:none}
 .list .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .list li.current .name{color:var(--accent);font-weight:600}
 .list li.current .idx{color:var(--accent)}
-.del{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--muted);flex:none}
-.del svg{width:18px;height:18px;fill:currentColor}
-.del:active{color:var(--danger);background:var(--accent-soft)}
-.empty{color:var(--muted);padding:22px 4px;text-align:center}
+.more{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--muted);flex:none}
+.more svg{width:20px;height:20px;fill:currentColor}
+.more:active{background:var(--accent-soft)}
+.empty{color:var(--muted);padding:22px 4px;text-align:center;display:block!important}
 .foot{margin-top:22px;display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:.85rem}
 .link{text-decoration:underline;color:var(--muted);padding:4px 0}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
+
+/* Pannello del brano */
+.sheet-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet-bg[hidden]{display:none}
+.sheet{background:var(--surface);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow-y:auto}
+.sheet-title{font-weight:600;font-size:1.05rem;margin-bottom:12px;word-break:break-word}
+.sheet-label{color:var(--muted);font-size:.85rem;margin:10px 0 4px}
+.check{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+.sheet-actions{display:grid;gap:8px;margin-top:14px}
+.sheet-actions button{padding:12px;border-radius:12px;border:1px solid var(--line);text-align:center;font-weight:500}
+.sheet-actions .danger{color:var(--danger)}
+.sheet-actions .close{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:30}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion: reduce){.prog-ring{transition:none}}
 </style>
@@ -139,9 +162,13 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
         <option value="45">Spegni tra 45 min</option>
         <option value="60">Spegni tra 60 min</option>
         <option value="90">Spegni tra 90 min</option>
+        <option value="120">Spegni tra 2 ore</option>
+        <option value="custom">Minuti a scelta…</option>
         <option value="end">A fine brano</option>
       </select>
+      <button class="chip" id="fade" aria-pressed="true">Dissolvenza</button>
     </div>
+    <div class="timer-info" id="timerInfo" aria-live="polite"></div>
   </section>
 
   <div class="lib-head">
@@ -152,11 +179,20 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
       <input type="file" id="file" multiple>
     </label>
   </div>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Playlist"></div>
+  <div class="list-tools" id="listTools"></div>
   <ol class="list" id="list"></ol>
 
   <div class="foot">
     <span id="storage"></span>
     <button class="link" id="clear">Svuota libreria</button>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheetBg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-title" id="sheetTitle"></div>
+    <div id="sheetBody"></div>
   </div>
 </div>
 
@@ -168,21 +204,26 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   const $ = id => document.getElementById(id);
   const audio = $('audio');
   const R = 88, C = 2 * Math.PI * R;
+  const FADE_MS = 30000;              // durata della dissolvenza finale
   $('prog').style.strokeDasharray = C;
   $('prog').style.strokeDashoffset = C;
 
   // ---------- Stato ----------
-  let tracks = [];            // {id, name, size, added}
-  let order = [];             // indici di riproduzione
-  let pos = -1;               // posizione in "order"
+  let tracks = [];          // {id, name, size, added}
+  let lists = [];           // {id, name, ids: []}
+  let activeList = 'all';   // playlist mostrata
+  let playCtx = 'all';      // playlist in riproduzione
+  let order = [];           // id dei brani nell'ordine di riproduzione
+  let curId = null;
   let currentUrl = null;
-  let repeatMode = 'no';      // no | tutti | uno
+  let repeatMode = 'no';    // no | tutti | uno
   let shuffle = false;
+  let fadeOn = true;
   const speeds = [1, 1.25, 1.5, 0.75];
   let speedIdx = 0;
-  let sleepTimer = null, sleepAtEnd = false, sleepUntil = 0, sleepTick = null;
+  let sleepUntil = 0, sleepAtEnd = false, sleepTick = null;
 
-  // ---------- Preferenze (localStorage protetto) ----------
+  // ---------- Preferenze ----------
   const prefs = {
     get(k, d) { try { const v = localStorage.getItem('ascolto:' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem('ascolto:' + k, JSON.stringify(v)); } catch {} }
@@ -193,11 +234,12 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   function openDB() {
     return new Promise(res => {
       try {
-        const req = indexedDB.open('ascolto-db', 1);
+        const req = indexedDB.open('ascolto-db', 2);
         req.onupgradeneeded = () => {
           const d = req.result;
           if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'id' });
           if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs');
+          if (!d.objectStoreNames.contains('lists')) d.createObjectStore('lists', { keyPath: 'id' });
         };
         req.onsuccess = () => res(req.result);
         req.onerror = () => res(null);
@@ -216,11 +258,9 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
       } catch (e) { rej(e); }
     });
   }
-  const getAllMeta = () => tx('meta', 'readonly', s => s.getAll());
-  const getBlob = id => tx('blobs', 'readonly', s => s.get(id));
-
-  // Blob in memoria se IndexedDB non disponibile
-  const memBlobs = new Map();
+  const memBlobs = new Map();       // riserva se IndexedDB non è disponibile
+  const saveList = l => tx('lists', 'readwrite', s => s.put(l)).catch(() => {});
+  const deleteListDB = id => tx('lists', 'readwrite', s => s.delete(id)).catch(() => {});
 
   // ---------- Utilità ----------
   const fmt = s => {
@@ -230,67 +270,191 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`;
   };
   const cleanName = n => n.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
+  const byId = id => tracks.find(t => t.id === id);
+  const listById = id => lists.find(l => l.id === id);
+  const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   let toastT;
   function toast(msg) {
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400);
   }
 
+  // Brani di una vista: "Tutti" in ordine alfabetico, playlist nell'ordine di inserimento
+  function viewIds(ctx) {
+    if (ctx === 'all') return tracks.map(t => t.id);
+    const l = listById(ctx);
+    return l ? l.ids.filter(id => byId(id)) : tracks.map(t => t.id);
+  }
+  function ctxName(ctx) { return ctx === 'all' ? 'Tutti i brani' : (listById(ctx) || {}).name || 'Tutti i brani'; }
+
   function buildOrder(keepId) {
-    order = tracks.map((_, i) => i);
+    order = viewIds(playCtx);
     if (shuffle) {
       for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-      if (keepId) {
-        const ti = tracks.findIndex(t => t.id === keepId);
-        const k = order.indexOf(ti);
-        if (k > 0) { order.splice(k, 1); order.unshift(ti); }
-      }
-    }
-    if (keepId) {
-      const ti = tracks.findIndex(t => t.id === keepId);
-      pos = ti >= 0 ? order.indexOf(ti) : (tracks.length ? 0 : -1);
+      const k = keepId ? order.indexOf(keepId) : -1;
+      if (k > 0) { order.splice(k, 1); order.unshift(keepId); }
     }
   }
-  const currentTrack = () => (pos >= 0 && order[pos] !== undefined) ? tracks[order[pos]] : null;
+  const currentTrack = () => curId ? byId(curId) : null;
 
-  // ---------- Libreria UI ----------
+  // ---------- Schede playlist ----------
+  function renderTabs() {
+    const box = $('tabs'); box.innerHTML = '';
+    const mk = (id, label, n) => {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.setAttribute('role', 'tab');
+      b.setAttribute('aria-pressed', id === activeList);
+      b.setAttribute('aria-selected', id === activeList);
+      b.textContent = `${label} · ${n}`;
+      b.onclick = () => { activeList = id; prefs.set('active', id); renderTabs(); renderList(); };
+      box.appendChild(b);
+    };
+    mk('all', 'Tutti', tracks.length);
+    lists.forEach(l => mk(l.id, l.name, viewIds(l.id).length));
+    const nb = document.createElement('button');
+    nb.className = 'chip new'; nb.textContent = '+ Nuova playlist';
+    nb.onclick = () => newList(null);
+    box.appendChild(nb);
+    const sel = box.querySelector('[aria-pressed="true"]');
+    if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  function renderTools() {
+    const box = $('listTools'); box.innerHTML = '';
+    const ids = viewIds(activeList);
+    if (ids.length) {
+      const p = document.createElement('button');
+      p.className = 'chip play-all';
+      p.textContent = activeList === 'all' ? '▶ Riproduci tutto' : '▶ Riproduci playlist';
+      p.onclick = () => {
+        playCtx = activeList; prefs.set('ctx', playCtx);
+        buildOrder(null); curId = order[0]; loadCurrent(true);
+      };
+      box.appendChild(p);
+    }
+    if (activeList !== 'all') {
+      const r = document.createElement('button');
+      r.className = 'chip'; r.textContent = 'Rinomina';
+      r.onclick = () => renameList(activeList);
+      const d = document.createElement('button');
+      d.className = 'chip danger'; d.textContent = 'Elimina playlist';
+      d.onclick = () => deleteList(activeList);
+      box.append(r, d);
+    }
+  }
+
+  // ---------- Elenco brani ----------
   function renderList() {
+    renderTools();
     const ol = $('list'); ol.innerHTML = '';
     $('count').textContent = tracks.length ? `${tracks.length} ${tracks.length === 1 ? 'brano' : 'brani'}` : '';
-    if (!tracks.length) {
+    const ids = viewIds(activeList);
+    if (!ids.length) {
       const li = document.createElement('li');
       li.className = 'empty';
-      li.textContent = 'Nessun brano. Tocca «Aggiungi» e scegli gli MP3 dal telefono.';
+      li.textContent = activeList === 'all'
+        ? 'Nessun brano. Tocca «Aggiungi» e scegli gli MP3 dal telefono.'
+        : 'Playlist vuota. Tocca «Aggiungi» mentre sei qui, oppure apri «Tutti» e usa ⋮ accanto a un brano.';
       ol.appendChild(li);
     }
-    const cur = currentTrack();
-    tracks.forEach((t, i) => {
+    ids.forEach((id, i) => {
+      const t = byId(id);
       const li = document.createElement('li');
-      if (cur && cur.id === t.id) li.className = 'current';
+      if (id === curId) li.className = 'current';
       const pick = document.createElement('button');
       pick.className = 'pick';
       pick.innerHTML = `<span class="idx">${i + 1}</span><span class="name"></span>`;
       pick.querySelector('.name').textContent = t.name;
-      pick.onclick = () => { const k = order.indexOf(i); pos = k; loadCurrent(true); };
-      const del = document.createElement('button');
-      del.className = 'del';
-      del.setAttribute('aria-label', 'Rimuovi ' + t.name);
-      del.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-      del.onclick = () => removeTrack(t.id);
-      li.append(pick, del);
+      pick.onclick = () => {
+        playCtx = activeList; prefs.set('ctx', playCtx);
+        buildOrder(id); curId = id; loadCurrent(true);
+      };
+      const more = document.createElement('button');
+      more.className = 'more';
+      more.setAttribute('aria-label', 'Opzioni per ' + t.name);
+      more.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+      more.onclick = () => openTrackSheet(id);
+      li.append(pick, more);
       ol.appendChild(li);
     });
-    updateStorage();
-  }
-
-  async function updateStorage() {
     const total = tracks.reduce((a, t) => a + (t.size || 0), 0);
-    let txt = total ? `${(total / 1048576).toFixed(1)} MB salvati` : '';
-    if (!db) txt = 'Archivio non disponibile: i brani restano solo finché la pagina è aperta';
-    $('storage').textContent = txt;
+    $('storage').textContent = !db ? 'Archivio non disponibile: i brani restano solo finché l’app è aperta'
+      : total ? `${(total / 1048576).toFixed(1)} MB salvati` : '';
+  }
+  const renderAll = () => { renderTabs(); renderList(); };
+
+  // ---------- Pannello opzioni del brano ----------
+  function closeSheet() { $('sheetBg').hidden = true; }
+  $('sheetBg').addEventListener('click', e => { if (e.target === $('sheetBg')) closeSheet(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+  function openTrackSheet(id) {
+    const t = byId(id); if (!t) return;
+    $('sheetTitle').textContent = t.name;
+    const body = $('sheetBody'); body.innerHTML = '';
+    const lab = document.createElement('div');
+    lab.className = 'sheet-label';
+    lab.textContent = lists.length ? 'Nelle playlist' : 'Non hai ancora playlist';
+    body.appendChild(lab);
+    lists.forEach(l => {
+      const row = document.createElement('label');
+      row.className = 'check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = l.ids.includes(id);
+      cb.onchange = () => {
+        if (cb.checked) { if (!l.ids.includes(id)) l.ids.push(id); }
+        else l.ids = l.ids.filter(x => x !== id);
+        saveList(l);
+        if (playCtx === l.id) buildOrder(curId);
+        renderAll();
+      };
+      const span = document.createElement('span'); span.textContent = l.name;
+      row.append(cb, span);
+      body.appendChild(row);
+    });
+    const acts = document.createElement('div'); acts.className = 'sheet-actions';
+    const nb = document.createElement('button');
+    nb.textContent = '+ Nuova playlist con questo brano';
+    nb.onclick = () => { closeSheet(); newList(id); };
+    const del = document.createElement('button');
+    del.className = 'danger'; del.textContent = 'Rimuovi dalla libreria';
+    del.onclick = () => { closeSheet(); if (confirm(`Rimuovere «${t.name}» dal lettore e da tutte le playlist?`)) removeTrack(id); };
+    const cl = document.createElement('button');
+    cl.className = 'close'; cl.textContent = 'Fatto';
+    cl.onclick = closeSheet;
+    acts.append(nb, del, cl);
+    body.appendChild(acts);
+    $('sheetBg').hidden = false;
   }
 
-  // ---------- Aggiunta / rimozione ----------
+  // ---------- Gestione playlist ----------
+  function newList(withId) {
+    const name = (prompt('Nome della nuova playlist') || '').trim();
+    if (!name) return;
+    const l = { id: newId('p'), name: name.slice(0, 40), ids: withId ? [withId] : [] };
+    lists.push(l); saveList(l);
+    activeList = l.id; prefs.set('active', l.id);
+    renderAll();
+    toast(withId ? `Creata «${l.name}» con il brano` : `Playlist «${l.name}» creata`);
+  }
+  function renameList(id) {
+    const l = listById(id); if (!l) return;
+    const name = (prompt('Nuovo nome della playlist', l.name) || '').trim();
+    if (!name) return;
+    l.name = name.slice(0, 40); saveList(l); renderAll();
+    if (playCtx === id) updateSub();
+  }
+  function deleteList(id) {
+    const l = listById(id); if (!l) return;
+    if (!confirm(`Eliminare la playlist «${l.name}»? I brani restano nella libreria.`)) return;
+    lists = lists.filter(x => x.id !== id); deleteListDB(id);
+    if (activeList === id) { activeList = 'all'; prefs.set('active', 'all'); }
+    if (playCtx === id) { playCtx = 'all'; prefs.set('ctx', 'all'); buildOrder(curId); updateSub(); }
+    renderAll();
+    toast('Playlist eliminata');
+  }
+
+  // ---------- Aggiunta / rimozione brani ----------
   $('file').addEventListener('change', async e => {
     const all = [...e.target.files];
     e.target.value = '';
@@ -298,54 +462,67 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     if (all.length && !files.length) { toast('Nessun file audio tra quelli scelti'); return; }
     if (!files.length) return;
     if (files.length < all.length) toast(`${all.length - files.length} file non audio ignorati`);
-    let added = 0;
+    const targetList = activeList !== 'all' ? listById(activeList) : null;
+    const added = [];
     for (const f of files) {
-      const id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      const id = newId('t');
       const meta = { id, name: cleanName(f.name), size: f.size, added: Date.now() };
       try {
         if (db) {
           await tx('blobs', 'readwrite', s => s.put(f, id));
           await tx('meta', 'readwrite', s => s.put(meta));
         } else memBlobs.set(id, f);
-        tracks.push(meta); added++;
       } catch {
-        memBlobs.set(id, f); tracks.push(meta); added++;
+        memBlobs.set(id, f);
         toast('Spazio pieno: alcuni brani non resteranno salvati');
       }
+      tracks.push(meta); added.push(id);
     }
     tracks.sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true }));
-    const cur = currentTrack();
-    buildOrder(cur ? cur.id : tracks[0].id);
-    if (!cur) loadCurrent(false);
-    renderList();
-    toast(added === 1 ? 'Brano aggiunto' : `${added} brani aggiunti`);
+    if (targetList) { targetList.ids.push(...added); saveList(targetList); }
+    if (!currentTrack()) {
+      playCtx = activeList; prefs.set('ctx', playCtx);
+      buildOrder(null); curId = order[0] || null; loadCurrent(false);
+    } else buildOrder(curId);
+    renderAll();
+    const what = added.length === 1 ? 'Brano aggiunto' : `${added.length} brani aggiunti`;
+    toast(targetList ? `${what} a «${targetList.name}»` : what);
   });
 
   async function removeTrack(id) {
-    const cur = currentTrack();
-    const wasCurrent = cur && cur.id === id;
+    const wasCurrent = curId === id;
     const wasPlaying = !audio.paused;
+    const i = order.indexOf(id);
     try { if (db) { await tx('blobs', 'readwrite', s => s.delete(id)); await tx('meta', 'readwrite', s => s.delete(id)); } } catch {}
     memBlobs.delete(id);
     tracks = tracks.filter(t => t.id !== id);
+    lists.forEach(l => { if (l.ids.includes(id)) { l.ids = l.ids.filter(x => x !== id); saveList(l); } });
     if (wasCurrent) {
       audio.pause(); audio.removeAttribute('src');
-      buildOrder(null);
-      pos = tracks.length ? Math.min(Math.max(pos, 0), tracks.length - 1) : -1;
-      if (pos >= 0) loadCurrent(wasPlaying); else resetUI();
-    } else buildOrder(cur ? cur.id : null);
-    renderList();
+      order = order.filter(x => x !== id);
+      if (!order.length) { playCtx = 'all'; buildOrder(null); }
+      curId = order.length ? order[Math.min(Math.max(i, 0), order.length - 1)] : null;
+      if (curId) loadCurrent(wasPlaying); else resetUI();
+    } else order = order.filter(x => x !== id);
+    renderAll();
     toast('Brano rimosso');
   }
 
   $('clear').onclick = async () => {
-    if (!tracks.length) return;
-    if (!confirm('Rimuovere tutti i brani dalla libreria?')) return;
+    if (!tracks.length && !lists.length) return;
+    if (!confirm('Rimuovere tutti i brani e tutte le playlist?')) return;
     audio.pause(); audio.removeAttribute('src');
-    try { if (db) { await tx('blobs', 'readwrite', s => s.clear()); await tx('meta', 'readwrite', s => s.clear()); } } catch {}
-    memBlobs.clear(); tracks = []; order = []; pos = -1;
-    prefs.set('resume', null);
-    resetUI(); renderList();
+    try {
+      if (db) {
+        await tx('blobs', 'readwrite', s => s.clear());
+        await tx('meta', 'readwrite', s => s.clear());
+        await tx('lists', 'readwrite', s => s.clear());
+      }
+    } catch {}
+    memBlobs.clear(); tracks = []; lists = []; order = []; curId = null;
+    activeList = 'all'; playCtx = 'all';
+    prefs.set('active', 'all'); prefs.set('ctx', 'all'); prefs.set('resume', null);
+    resetUI(); renderAll();
     toast('Libreria svuotata');
   };
 
@@ -357,19 +534,26 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   }
 
   // ---------- Riproduzione ----------
+  function updateSub(extra = '') {
+    const i = order.indexOf(curId);
+    $('sub').textContent = curId ? `${ctxName(playCtx)} · ${i + 1} di ${order.length}${extra}` : '';
+  }
+
   async function loadCurrent(autoplay, startAt = 0) {
     const t = currentTrack(); if (!t) return resetUI();
     let blob = memBlobs.get(t.id);
-    if (!blob) { try { blob = await getBlob(t.id); } catch {} }
+    if (!blob) { try { blob = await tx('blobs', 'readonly', s => s.get(t.id)); } catch {} }
     if (!blob) { toast('File non trovato, lo rimuovo'); return removeTrack(t.id); }
     if (currentUrl) URL.revokeObjectURL(currentUrl);
     currentUrl = URL.createObjectURL(blob);
     audio.src = currentUrl;
     audio.playbackRate = speeds[speedIdx];
+    if (!sleepUntil) audio.volume = 1;
     $('title').textContent = t.name;
-    $('sub').textContent = `Brano ${order[pos] + 1} di ${tracks.length}`;
+    updateSub();
     renderList();
     setMediaMeta(t);
+    prefs.set('resume', { id: t.id, time: startAt });
     if (startAt > 0) {
       audio.addEventListener('loadedmetadata', () => { try { audio.currentTime = Math.min(startAt, Math.max(0, audio.duration - 1)); } catch {} }, { once: true });
     }
@@ -383,27 +567,31 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   function togglePlay() { audio.paused ? play() : audio.pause(); }
 
   function next(fromEnd = false) {
-    if (!tracks.length) return;
-    if (pos < order.length - 1) pos++;
-    else if (repeatMode === 'tutti' || !fromEnd) { if (shuffle && fromEnd) buildOrder(null); pos = 0; }
-    else { audio.pause(); audio.currentTime = 0; return; }
-    loadCurrent(true);
+    if (!order.length) return;
+    let i = order.indexOf(curId);
+    if (i < order.length - 1) i++;
+    else if (repeatMode === 'tutti' || !fromEnd) {
+      if (shuffle && fromEnd) buildOrder(null);
+      i = 0;
+    } else { audio.pause(); audio.currentTime = 0; return; }
+    curId = order[i]; loadCurrent(true);
   }
   function prev() {
-    if (!tracks.length) return;
+    if (!order.length) return;
     if (audio.currentTime > 4) { audio.currentTime = 0; return; }
-    pos = pos > 0 ? pos - 1 : order.length - 1;
-    loadCurrent(true);
+    let i = order.indexOf(curId);
+    i = i > 0 ? i - 1 : order.length - 1;
+    curId = order[i]; loadCurrent(true);
   }
   const seekBy = d => { if (isFinite(audio.duration)) audio.currentTime = Math.min(Math.max(0, audio.currentTime + d), audio.duration); };
 
   audio.addEventListener('ended', () => {
-    if (sleepAtEnd) { stopSleep(); toast('Timer: riproduzione fermata'); return; }
+    if (sleepAtEnd) { stopSleep(true); toast('Timer: riproduzione fermata'); return; }
     if (repeatMode === 'uno') { audio.currentTime = 0; play(); return; }
     next(true);
   });
 
-  // ---------- UI di avanzamento ----------
+  // ---------- Avanzamento ----------
   function setRing(frac) { $('prog').style.strokeDashoffset = C * (1 - Math.min(Math.max(frac, 0), 1)); }
   function setPlayIcon(playing) {
     $('playIcon').innerHTML = playing ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
@@ -419,16 +607,16 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     const now = Date.now();
     if (now - lastSave > 3000) {
       lastSave = now;
-      const t = currentTrack();
-      if (t) prefs.set('resume', { id: t.id, time: c });
+      if (curId) prefs.set('resume', { id: curId, time: c });
       updatePositionState();
     }
+    timerCheck();
   });
   audio.addEventListener('play', () => { setPlayIcon(true); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; });
   audio.addEventListener('pause', () => {
     setPlayIcon(false);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-    const t = currentTrack(); if (t) prefs.set('resume', { id: t.id, time: audio.currentTime });
+    if (curId) prefs.set('resume', { id: curId, time: audio.currentTime });
   });
   audio.addEventListener('error', () => { if (audio.src) toast('Formato non supportato da questo telefono'); });
 
@@ -460,9 +648,9 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   $('fwd30').onclick = () => seekBy(30);
 
   function applyRepeat() {
-    $('repeat').textContent = 'Ripeti: ' + repeatMode;
+    const label = { no: 'no', tutti: 'tutti', uno: 'questo brano' }[repeatMode];
+    $('repeat').textContent = 'Ripeti: ' + label;
     $('repeat').setAttribute('aria-pressed', repeatMode !== 'no');
-    audio.loop = false;
   }
   $('repeat').onclick = () => {
     repeatMode = repeatMode === 'no' ? 'tutti' : repeatMode === 'tutti' ? 'uno' : 'no';
@@ -471,7 +659,7 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   $('shuffle').onclick = () => {
     shuffle = !shuffle;
     $('shuffle').setAttribute('aria-pressed', shuffle);
-    const cur = currentTrack(); buildOrder(cur ? cur.id : null);
+    buildOrder(curId); updateSub();
     prefs.set('shuffle', shuffle);
     toast(shuffle ? 'Riproduzione casuale attiva' : 'Ordine normale');
   };
@@ -481,36 +669,72 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     $('speed').setAttribute('aria-pressed', speeds[speedIdx] !== 1);
   }
   $('speed').onclick = () => { speedIdx = (speedIdx + 1) % speeds.length; applySpeed(); prefs.set('speed', speedIdx); };
+  $('fade').onclick = () => {
+    fadeOn = !fadeOn;
+    $('fade').setAttribute('aria-pressed', fadeOn);
+    prefs.set('fade', fadeOn);
+    if (!fadeOn) audio.volume = 1;
+    toast(fadeOn ? 'Dissolvenza negli ultimi 30 secondi del timer' : 'Dissolvenza disattivata');
+  };
 
   // ---------- Timer di spegnimento ----------
-  function stopSleep() {
-    clearTimeout(sleepTimer); clearInterval(sleepTick);
-    sleepTimer = null; sleepAtEnd = false; sleepUntil = 0;
-    $('sleep').value = '0';
-    $('sleep').options[0].textContent = 'Timer: off';
-    if (!audio.paused) audio.pause();
+  let lastSleepValue = '0';
+  function stopSleep(pause) {
+    clearInterval(sleepTick); sleepTick = null;
+    sleepUntil = 0; sleepAtEnd = false;
+    $('sleep').value = '0'; lastSleepValue = '0';
+    $('timerInfo').textContent = '';
+    if (pause && !audio.paused) audio.pause();
+    audio.volume = 1;
+  }
+  function startSleep(minutes) {
+    clearInterval(sleepTick);
+    sleepAtEnd = false;
+    sleepUntil = Date.now() + minutes * 60000;
+    sleepTick = setInterval(timerCheck, 1000);
+    timerCheck();
+    toast(`Si ferma tra ${minutes} ${minutes === 1 ? 'minuto' : 'minuti'}`);
+  }
+  function timerCheck() {
+    if (sleepUntil) {
+      const rem = sleepUntil - Date.now();
+      if (rem <= 0) { stopSleep(true); toast('Timer: riproduzione fermata'); return; }
+      $('timerInfo').textContent = 'Spegnimento tra ' + fmt(rem / 1000);
+      if (fadeOn && rem <= FADE_MS) audio.volume = Math.max(0.03, rem / FADE_MS);
+    } else if (sleepAtEnd) {
+      const d = audio.duration, left = d - audio.currentTime;
+      $('timerInfo').textContent = isFinite(d) ? 'Si ferma a fine brano · ' + fmt(left) : 'Si ferma a fine brano';
+      if (fadeOn && isFinite(d) && left * 1000 <= FADE_MS) audio.volume = Math.max(0.03, (left * 1000) / FADE_MS);
+    }
   }
   $('sleep').addEventListener('change', e => {
-    clearTimeout(sleepTimer); clearInterval(sleepTick); sleepAtEnd = false; sleepUntil = 0;
-    $('sleep').options[0].textContent = 'Timer: off';
     const v = e.target.value;
-    if (v === '0') { toast('Timer disattivato'); return; }
-    if (v === 'end') { sleepAtEnd = true; toast('Si ferma a fine brano'); return; }
-    const ms = +v * 60000;
-    sleepUntil = Date.now() + ms;
-    sleepTimer = setTimeout(() => { stopSleep(); toast('Timer: riproduzione fermata'); }, ms);
-    // Controllo di sicurezza: i timer in background possono rallentare
-    sleepTick = setInterval(() => { if (sleepUntil && Date.now() >= sleepUntil) { stopSleep(); toast('Timer: riproduzione fermata'); } }, 15000);
-    toast(`Si ferma tra ${v} minuti`);
+    if (v === '0') { stopSleep(false); toast('Timer disattivato'); return; }
+    if (v === 'end') {
+      clearInterval(sleepTick); sleepUntil = 0; sleepAtEnd = true;
+      sleepTick = setInterval(timerCheck, 1000);
+      audio.volume = 1; lastSleepValue = v; timerCheck();
+      toast('Si ferma a fine brano'); return;
+    }
+    let minutes = +v;
+    if (v === 'custom') {
+      const ans = prompt('Dopo quanti minuti fermare la riproduzione?', '20');
+      minutes = parseInt(ans, 10);
+      if (!(minutes > 0 && minutes <= 720)) { e.target.value = lastSleepValue; if (ans !== null) toast('Inserisci un numero tra 1 e 720'); return; }
+    }
+    audio.volume = 1;
+    lastSleepValue = v;
+    startSleep(minutes);
   });
-  audio.addEventListener('timeupdate', () => { if (sleepUntil && Date.now() >= sleepUntil) stopSleep(); });
 
   // ---------- Media Session (tendina e schermata di blocco) ----------
+  const artworkData = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#16233a"/><circle cx="256" cy="256" r="170" fill="none" stroke="#2c3c5c" stroke-width="36"/><path d="M256 86a170 170 0 0 1 147 255" fill="none" stroke="#eda54f" stroke-width="36" stroke-linecap="round"/><path d="M220 196v120l100-60z" fill="#e9ece6"/></svg>');
   function setMediaMeta(t) {
     if (!('mediaSession' in navigator)) return;
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: t.name, artist: 'Ascolto', album: `Brano ${order[pos] + 1} di ${tracks.length}`,
+        title: t.name, artist: 'Ascolto', album: ctxName(playCtx),
         artwork: [{ src: artworkData, sizes: '512x512', type: 'image/svg+xml' }]
       });
     } catch {}
@@ -521,8 +745,6 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
     if (!isFinite(d) || d <= 0) return;
     try { navigator.mediaSession.setPositionState({ duration: d, playbackRate: audio.playbackRate, position: Math.min(audio.currentTime, d) }); } catch {}
   }
-  const artworkData = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#16233a"/><circle cx="256" cy="256" r="170" fill="none" stroke="#2c3c5c" stroke-width="36"/><path d="M256 86a170 170 0 0 1 147 255" fill="none" stroke="#eda54f" stroke-width="36" stroke-linecap="round"/><path d="M220 196v120l100-60z" fill="#e9ece6"/></svg>');
   if ('mediaSession' in navigator) {
     const ms = navigator.mediaSession;
     const h = (a, f) => { try { ms.setActionHandler(a, f); } catch {} };
@@ -542,25 +764,30 @@ ol.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
   // ---------- Avvio ----------
   (async () => {
     db = await openDB();
-    try { const persisted = navigator.storage && navigator.storage.persist && await navigator.storage.persist(); } catch {}
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch {}
     repeatMode = prefs.get('repeat', 'no'); applyRepeat();
     shuffle = prefs.get('shuffle', false); $('shuffle').setAttribute('aria-pressed', shuffle);
     speedIdx = prefs.get('speed', 0) % speeds.length; applySpeed();
-    try { tracks = (await getAllMeta()) || []; } catch { tracks = []; }
+    fadeOn = prefs.get('fade', true); $('fade').setAttribute('aria-pressed', fadeOn);
+    try { tracks = (await tx('meta', 'readonly', s => s.getAll())) || []; } catch { tracks = []; }
+    try { lists = (await tx('lists', 'readonly', s => s.getAll())) || []; } catch { lists = []; }
     tracks.sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true }));
+    lists.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    activeList = prefs.get('active', 'all'); if (activeList !== 'all' && !listById(activeList)) activeList = 'all';
+    playCtx = prefs.get('ctx', 'all'); if (playCtx !== 'all' && !listById(playCtx)) playCtx = 'all';
     const resume = prefs.get('resume', null);
-    const startId = resume && tracks.some(t => t.id === resume.id) ? resume.id : (tracks[0] && tracks[0].id);
-    buildOrder(startId || null);
-    if (!startId) pos = -1;
-    renderList();
-    if (startId) {
-      await loadCurrent(false, resume && resume.id === startId ? resume.time : 0);
-      if (resume && resume.id === startId && resume.time > 5) $('sub').textContent += ` · riprende da ${fmt(resume.time)}`;
+    const ids = viewIds(playCtx);
+    curId = resume && ids.includes(resume.id) ? resume.id : (ids[0] || null);
+    buildOrder(curId);
+    renderAll();
+    if (curId) {
+      const t0 = resume && resume.id === curId ? resume.time || 0 : 0;
+      await loadCurrent(false, t0);
+      if (t0 > 5) updateSub(` · riprende da ${fmt(t0)}`);
     }
   })();
 })();
 </script>
-
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });

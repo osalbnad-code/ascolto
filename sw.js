@@ -1,5 +1,5 @@
 // Service worker: rende Ascolto installabile e utilizzabile anche offline
-const CACHE = 'ascolto-v1';
+const CACHE = 'ascolto-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
